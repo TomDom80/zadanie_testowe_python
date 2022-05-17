@@ -18,7 +18,7 @@ columns = [
 
 
 def csv_to_dicts_list(file, names):
-    with open(filepath, 'r') as csvfile:
+    with open(file, 'r') as csvfile:
         file_data = csv.reader(csvfile, delimiter=';')
         return [dict(zip(names, row)) for row in file_data]
 
