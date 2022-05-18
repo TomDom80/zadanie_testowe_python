@@ -2,90 +2,38 @@ import csv
 
 filepath = 'data.raw'
 
-# columns = [
-#     # 'disk_age_in_s',
-#     'data_center', 'host_name', 'disk_serial',
-#     'disk_age',
-#     'total_reads',
-#     'total_writes',
-#     # 'average_IO_latency_from_5_minutes_in_ms',
-#     'av_IO_in_ms',
-#     # 'total_uncorrected_read_errors',
-#     'tot_read_errs',
-#     # 'total_uncorrected_write_errors',
-#     'tot_write_errs',
-# ]
+columns = [
+    'data_center', 'host_name', 'disk_serial',
+    # 'disk_age_in_s',
+    'disk_age',
+    'total_reads',
+    'total_writes',
+    # 'average_IO_latency_from_5_minutes_in_ms',
+    'av_IO_in_ms',
+    # 'total_uncorrected_read_errors',
+    'tot_read_errs',
+    # 'total_uncorrected_write_errors',
+    'tot_write_errs',
+]
 
 
-class Disk:
+def csv_to_dicts_list(file, names):
+    with open(file, 'r') as csvfile:
+        file_data = csv.reader(csvfile, delimiter=';')
+        return [dict(zip(names, row)) for row in file_data]
 
-    def __init__(self, data_center, host_name, disk_serial, disk_age,
-                 total_reads, total_writes, av_IO_in_ms, tot_read_errs,
-                 tot_write_errs):
-        # self.data_center = data_center
-        # self.host_name = host_name
-        # self.disk_serial = disk_serial
-        # self.disk_age = int(disk_age)
-        # self.total_reads = int(total_reads)
-        # self.total_writes = int(total_writes)
-        # self.av_IO_in_ms = int(av_IO_in_ms)
-        # self.tot_read_errs = int(tot_read_errs)
-        # self.tot_write_errs = int(tot_write_errs)
-        self.__data_center = data_center
-        self.__host_name = host_name
-        self.__disk_serial = disk_serial
-        self.__disk_age = int(disk_age)
-        self.__total_reads = int(total_reads)
-        self.__total_writes = int(total_writes)
-        self.__av_IO_in_ms = int(av_IO_in_ms)
-        self.__tot_read_errs = int(tot_read_errs)
-        self.__tot_write_errs = int(tot_write_errs)
 
-    # ['disk_age', 'total_reads', 'total_writes',
-    #  'av_IO_in_ms', 'tot_read_errs', 'tot_write_errs'])
+def convert_to_int(dict_list, keys):
+    for d in dict_list:
+        for k in keys:
+            d[k] = int(d[k])
 
-    @property
-    def data_center(self):
-        return self.__data_center
 
-    @property
-    def host_name(self):
-        return self.__host_name
-
-    @property
-    def disk_serial(self):
-        return self.__disk_serial
-
-    @property
-    def disk_age(self):
-        return self.__disk_age
-
-    @property
-    def total_reads(self):
-        return self.__total_reads
-
-    @property
-    def total_writes(self):
-        return self.__total_writes
-
-    @property
-    def av_IO_in_ms(self):
-        return self.__av_IO_in_ms
-
-    @property
-    def tot_read_errs(self):
-        return self.__tot_read_errs
-
-    @property
-    def tot_write_errs(self):
-        return self.__tot_write_errs
-
-    @classmethod
-    def csv_to_obj_list(cls, csv_file):
-        with open(filepath, 'r') as csvfile:
-            file_data = csv.reader(csvfile, delimiter=';')
-            return [cls(*row) for row in file_data]
-    ####################################################################################
+def lists_grouped_per_dc(dict_list):
+    grouped_dict = {}
+    for d in dict_list:
+        grouped_dict.setdefault(d['data_center'], []).append(d)
+    return grouped_dict
 
 
 def count_disks_info(data_list):
@@ -123,10 +71,37 @@ def avg_disk_age_in_days(data_list):
     sum_age = 0
     for x in data_list:
         sum_age += x['disk_age']
-    return sum_age / len(data_list) / (3600 * 24)
+    return avg_age_in_days(sum_age, len(data_list))
+    # return round(sum_age / len(data_list) / (3600 * 24), 2)
 
 
-def calc_avg_io_ps(data_list):
+def avg_age_in_days(sum_age_in_sec, hdd_qty):
+    return round(sum_age_in_sec / hdd_qty / (3600 * 24), 2)
+
+
+# smd = {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5, 'f': 6, 'g': 7}
+
+
+def avg_disk_age_in_days_per_dc(grouped_data):
+    sum_age_total = 0
+    hdd_qty_total = 0
+    ret = {'total_avg_age': 0}
+
+    for dc in grouped_data:
+        sum_age_per_dc = 0
+        for hdd in grouped_data[dc]:
+            sum_age_total += int(hdd['disk_age'])
+            sum_age_per_dc += int(hdd['disk_age'])
+
+        hdd_qty_dc = len(grouped_data[dc])
+        hdd_qty_total += hdd_qty_dc
+        ret[f'{dc}_avg_age_days'] = avg_age_in_days(sum_age_per_dc, hdd_qty_dc)
+
+    ret['total_avg_age'] = avg_age_in_days(sum_age_total, hdd_qty_total)
+    return ret
+
+
+def calc_avg_iops(data_list):
     """
     Nie jestem do konca pewny czy o takie obliczenia chodziło.
     Nie do konca rozumiem pytanie.
@@ -140,8 +115,8 @@ def calc_avg_io_ps(data_list):
 
 
 def find_top_5_disks(data_list):
-    newlist = sorted(data_list, key=lambda k: (k['av_IO_in_ms']))
-    return newlist[:5] + newlist[-5:]
+    sorted_list = sorted(data_list, key=lambda k: (k['av_IO_in_ms']))
+    return sorted_list[:5] + sorted_list[-5:]
 
 
 def find_broken_disks(data_list):
@@ -170,9 +145,9 @@ def answer_2(yo):
     print('\n')
 
 
-def answer_3(avg):
+def answer_3(data):
     print(3, 'What\'s the average disk age per DC (in days)')
-    print('answer_3:', avg)
+    print(f'answer_3: {data}', )
     print('\n')
 
 
@@ -197,14 +172,19 @@ def answer_6(list):
         print(x, '\n', '-' * 30)
     print('\n')
 
-# list_of_dicts = csv_to_dicts_list(filepath, columns)
-# convert_to_int(list_of_dicts,
-#                ['disk_age', 'total_reads', 'total_writes', 'av_IO_in_ms', 'tot_read_errs', 'tot_write_errs'])
-# print(0, 'Imported {} records.{}'.format(len(list_of_dicts), '\n'))
-#
-# answer_1(count_disks_info(list_of_dicts))
-# answer_2(youngest_oldest_disk(list_of_dicts))
-# answer_3(avg_disk_age_in_days(list_of_dicts))
-# answer_4(calc_avg_io_ps(list_of_dicts))
+
+list_of_dicts = csv_to_dicts_list(filepath, columns)
+convert_to_int(list_of_dicts,
+               ['disk_age', 'total_reads', 'total_writes', 'av_IO_in_ms', 'tot_read_errs', 'tot_write_errs'])
+print(0, 'Imported {} records.{}'.format(len(list_of_dicts), '\n'))
+lists_grouped = lists_grouped_per_dc(list_of_dicts)
+
+answer_1(count_disks_info(list_of_dicts))
+answer_2(youngest_oldest_disk(list_of_dicts))
+answer_3(avg_disk_age_in_days(list_of_dicts))
+answer_3(avg_disk_age_in_days_per_dc(lists_grouped))
+# answer_4(calc_avg_iops(list_of_dicts))
 # answer_5(find_top_5_disks(list_of_dicts))
 # answer_6(find_broken_disks(list_of_dicts))
+
+# print(1 / (0.003 + 0.0045))

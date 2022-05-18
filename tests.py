@@ -1,5 +1,5 @@
 # from my_task import avg_disk_age_in_days, find_broken_disks
-from task import *
+from task_procedural import *
 
 '''
         python -m pytest tests.py -v
@@ -68,8 +68,9 @@ def test_calc_avg_io_ps():
     lio_2 = [io_0, io_1]
     lio_3 = [io_0, io_1, io_2]
 
-    assert calc_avg_io_ps(lio_0) == 3
-    assert calc_avg_io_ps(lio_1) == 5
-    assert calc_avg_io_ps(lio_2) == 4
-    assert calc_avg_io_ps(lio_3) == 4
+    assert calc_avg_iops(lio_0) == 3
+    assert calc_avg_iops(lio_0) == 3
+    assert calc_avg_iops(lio_1) == 5
+    assert calc_avg_iops(lio_2) == 4
+    assert calc_avg_iops(lio_3) == 4
 
